@@ -10,7 +10,7 @@ import os
 # НАСТРОЙКИ БОТА
 # ==========================================
 # Вставьте сюда токен вашего бота от @BotFather (или задайте через переменную окружения)
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8756512607:AAFCn7K13Jz7tS0z2I3CB0Uog5WhTD4aKq4")
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8756512607:AAHhfh9RuNC6Ew2wCZ7dGpnbYOjSfxoRzDY")
 
 # Настройки прокси для Telegram (для работы в РФ)
 USE_PROXY = False  # Измените на False, если ставите на зарубежный сервер
