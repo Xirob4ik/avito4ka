@@ -55,7 +55,8 @@ struct ParameterTests : public juce::UnitTest
 
     void runTest() override
     {
-        ClipperAudioProcessor p;
+        auto pOwner = std::make_unique<ClipperAudioProcessor>();   // heap: the processor is large (waveform buffer)
+        auto& p = *pOwner;
 
         beginTest ("exactly the eight documented parameters exist, with stable IDs, all automatable");
         {
@@ -131,7 +132,8 @@ struct StateTests : public juce::UnitTest
     {
         beginTest ("state round-trips every parameter and the preset name");
         {
-            ClipperAudioProcessor a;
+            auto aOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& a = *aOwner;
             setPlain (a, ids::kInput, 7.3f);   setPlain (a, ids::kClip, -9.7f);  setPlain (a, ids::kOutput, -2.4f);
             setPlain (a, ids::kMix, 62.5f);    setPlain (a, ids::kMode, 2.0f);   setPlain (a, ids::kOversampling, 3.0f);
             setPlain (a, ids::kLink, 0.0f);    setPlain (a, ids::kCeiling, 0.0f);
@@ -141,7 +143,9 @@ struct StateTests : public juce::UnitTest
             a.getStateInformation (blob);
             expectGreaterThan ((int) blob.getSize(), 0);
 
-            ClipperAudioProcessor b;
+            auto bOwner = std::make_unique<ClipperAudioProcessor>();
+
+            auto& b = *bOwner;
             b.setStateInformation (blob.getData(), (int) blob.getSize());
             for (const char* id : { ids::kInput, ids::kClip, ids::kOutput, ids::kMix, ids::kMode, ids::kOversampling, ids::kLink, ids::kCeiling })
                 expectWithinAbsoluteError (getPlain (b, id), getPlain (a, id), 1.0e-4f, juce::String ("restored ") + id);
@@ -150,12 +154,15 @@ struct StateTests : public juce::UnitTest
 
         beginTest ("restoring state while audio is prepared updates the DSP settings");
         {
-            ClipperAudioProcessor a;
+            auto aOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& a = *aOwner;
             setPlain (a, ids::kClip, -12.0f);
             juce::MemoryBlock blob;
             a.getStateInformation (blob);
 
-            ClipperAudioProcessor b;
+            auto bOwner = std::make_unique<ClipperAudioProcessor>();
+
+            auto& b = *bOwner;
             prepare (b, 2);
             b.setStateInformation (blob.getData(), (int) blob.getSize());
             const auto s = b.readSettings();
@@ -164,7 +171,8 @@ struct StateTests : public juce::UnitTest
 
         beginTest ("garbage, empty or foreign state is ignored without crashing or changing anything");
         {
-            ClipperAudioProcessor a;
+            auto aOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& a = *aOwner;
             setPlain (a, ids::kClip, -5.0f);
 
             const char junk[] = "this is not a plugin state";
@@ -182,7 +190,8 @@ struct StateTests : public juce::UnitTest
 
         beginTest ("state with out-of-range values is clamped into the legal range");
         {
-            ClipperAudioProcessor a;
+            auto aOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& a = *aOwner;
             setPlain (a, ids::kClip, -5.0f);                    // makes sure the parameter has a node in the tree
             auto state = a.apvts.copyState();
             auto child = state.getChildWithProperty ("id", ids::kClip);
@@ -192,7 +201,9 @@ struct StateTests : public juce::UnitTest
             juce::MemoryBlock blob;
             ClipperAudioProcessor::copyXmlToBinary (*xml, blob);
 
-            ClipperAudioProcessor b;
+            auto bOwner = std::make_unique<ClipperAudioProcessor>();
+
+            auto& b = *bOwner;
             b.setStateInformation (blob.getData(), (int) blob.getSize());
             const auto s = b.readSettings();
             expectLessOrEqual (s.clipDb, 0.0f);
@@ -211,7 +222,8 @@ struct ProcessingTests : public juce::UnitTest
     {
         beginTest ("bus layouts: mono and stereo are accepted, everything else is refused");
         {
-            ClipperAudioProcessor p;
+            auto pOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& p = *pOwner;
             auto layout = [] (juce::AudioChannelSet in, juce::AudioChannelSet out)
             {
                 juce::AudioProcessor::BusesLayout l;
@@ -228,7 +240,8 @@ struct ProcessingTests : public juce::UnitTest
         beginTest ("the plugin produces the same audio as the bare engine (stereo)");
         for (int os : { 0, 2 })
         {
-            ClipperAudioProcessor p;
+            auto pOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& p = *pOwner;
             setPlain (p, ids::kInput, 5.0f);  setPlain (p, ids::kClip, -8.0f);  setPlain (p, ids::kOutput, 1.5f);
             setPlain (p, ids::kMix, 85.0f);   setPlain (p, ids::kMode, 1.0f);   setPlain (p, ids::kOversampling, (float) os);
             setPlain (p, ids::kLink, 0.0f);
@@ -248,7 +261,10 @@ struct ProcessingTests : public juce::UnitTest
 
         beginTest ("mono instance matches the left channel of a stereo instance");
         {
-            ClipperAudioProcessor stereo, mono;
+            auto stereoOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& stereo = *stereoOwner;
+            auto monoOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& mono = *monoOwner;
             for (auto* p : { &stereo, &mono })
             {
                 setPlain (*p, ids::kInput, 8.0f);  setPlain (*p, ids::kClip, -6.0f);  setPlain (*p, ids::kOversampling, 1.0f);
@@ -272,7 +288,8 @@ struct ProcessingTests : public juce::UnitTest
 
         beginTest ("parameter changes made during playback take effect");
         {
-            ClipperAudioProcessor p;
+            auto pOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& p = *pOwner;
             setPlain (p, ids::kOversampling, 0.0f);  setPlain (p, ids::kClip, -12.0f);
             prepare (p, 2);
             const auto loud = makeSine (2, 4800, kFs, 440.0, 0.9f);
@@ -291,7 +308,8 @@ struct ProcessingTests : public juce::UnitTest
         beginTest ("bypass keeps the latency (dry signal arrives delayed by exactly the reported latency)");
         for (int os : { 0, 1, 3 })
         {
-            ClipperAudioProcessor p;
+            auto pOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& p = *pOwner;
             setPlain (p, ids::kOversampling, (float) os);  setPlain (p, ids::kInput, 12.0f);  setPlain (p, ids::kClip, -20.0f);
             prepare (p, 2);
             const int latency = p.getEngine().getLatencySamplesFor (os);
@@ -310,7 +328,8 @@ struct ProcessingTests : public juce::UnitTest
 
         beginTest ("latency is reported to the host and follows the oversampling mode");
         {
-            ClipperAudioProcessor p;
+            auto pOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& p = *pOwner;
             prepare (p, 2);
             expectEquals (p.getLatencySamples(), p.getEngine().getLatencySamplesFor (2), "initial (4x)");
 
@@ -326,7 +345,8 @@ struct ProcessingTests : public juce::UnitTest
 
         beginTest ("hostile input: NaN / Inf / huge values never reach the host");
         {
-            ClipperAudioProcessor p;
+            auto pOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& p = *pOwner;
             prepare (p, 2);
             auto in = makeNoise (2, 6000, 0.5f, 2);
             in.setSample (0, 100, std::numeric_limits<float>::quiet_NaN());
@@ -340,7 +360,9 @@ struct ProcessingTests : public juce::UnitTest
         {
             const auto in = makeNoise (2, 20000, 0.6f, 12);
 
-            ClipperAudioProcessor ref;
+            auto refOwner = std::make_unique<ClipperAudioProcessor>();
+
+            auto& ref = *refOwner;
             setPlain (ref, ids::kInput, 6.0f);  setPlain (ref, ids::kClip, -9.0f);
             prepare (ref, 2, 256);
             const auto reference = run (ref, in, 256);
@@ -348,7 +370,8 @@ struct ProcessingTests : public juce::UnitTest
 
             for (int block : { 1, 13, 97, 1000, 20000 })
             {
-                ClipperAudioProcessor q;
+                auto qOwner = std::make_unique<ClipperAudioProcessor>();
+                auto& q = *qOwner;
                 setPlain (q, ids::kInput, 6.0f);  setPlain (q, ids::kClip, -9.0f);
                 prepare (q, 2, 256);                                 // announced maximum is 256, blocks may exceed it
                 const auto out = run (q, in, block);
@@ -402,7 +425,8 @@ struct PresetTests : public juce::UnitTest
             juce::String worstKind;
             for (const char* kind : { "drums", "bass", "mix" })
             {
-                ClipperAudioProcessor p;
+                auto pOwner = std::make_unique<ClipperAudioProcessor>();
+                auto& p = *pOwner;
                 p.presetManager.apply (p.presetManager.findByName (f.name));
                 prepare (p, 2);
 
@@ -461,7 +485,8 @@ struct PresetTests : public juce::UnitTest
 
         beginTest ("applying a preset sets every parameter, names it, and clears the modified flag");
         {
-            ClipperAudioProcessor p;
+            auto pOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& p = *pOwner;
             auto& mgr = p.presetManager;
             for (std::size_t i = 0; i < fp::getNumFactoryPresets(); ++i)
             {
@@ -489,7 +514,8 @@ struct PresetTests : public juce::UnitTest
 
         beginTest ("step() walks the list and wraps around");
         {
-            ClipperAudioProcessor p;
+            auto pOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& p = *pOwner;
             auto& mgr = p.presetManager;
             const int count = (int) mgr.getEntries().size();
             mgr.apply (0);
@@ -503,7 +529,8 @@ struct PresetTests : public juce::UnitTest
 
         beginTest ("user presets: saved to disk, listed, restored; factory names and empty names refused");
         {
-            ClipperAudioProcessor p;
+            auto pOwner = std::make_unique<ClipperAudioProcessor>();
+            auto& p = *pOwner;
             auto& mgr = p.presetManager;
             const juce::String presetName = "Clipline unit test preset";
             const auto file = clipline::PresetManager::getUserPresetDirectory()
@@ -517,7 +544,9 @@ struct PresetTests : public juce::UnitTest
             expect (file.existsAsFile(), "file written");
             expect (! mgr.isModified(), "the saved preset is the current one");
 
-            ClipperAudioProcessor q;                          // a fresh instance finds it on disk
+            auto qOwner = std::make_unique<ClipperAudioProcessor>();
+
+            auto& q = *qOwner;                          // a fresh instance finds it on disk
             const int index = q.presetManager.findByName (presetName);
             expect (index >= 0, "listed after a rescan");
             if (index >= 0)

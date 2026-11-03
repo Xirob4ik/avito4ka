@@ -85,7 +85,8 @@ namespace
         } settingsGuard;            // declared first: restores after the editor is gone
 
         juce::SharedResourcePointer<clipline::ui::fonts::FontLibrary> fonts;
-        ClipperAudioProcessor processor;
+        std::unique_ptr<ClipperAudioProcessor> processorOwner = std::make_unique<ClipperAudioProcessor>();
+        ClipperAudioProcessor& processor = *processorOwner;    // on the heap: the processor is large
         std::unique_ptr<ClipperAudioProcessorEditor> editor;
 
         EditorFixture()

@@ -37,7 +37,8 @@ int runSnapshotTool (const juce::StringArray& args)
     const auto hover = argAfter (args, "--hover", "");
 
     constexpr double fs = 48000.0;
-    ClipperAudioProcessor processor;
+    auto processorOwner = std::make_unique<ClipperAudioProcessor>();
+    auto& processor = *processorOwner;
     processor.setPlayConfigDetails (2, 2, fs, 512);
     processor.prepareToPlay (fs, 512);
 

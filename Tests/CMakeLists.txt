@@ -32,7 +32,8 @@ target_link_libraries(ClipperTests
 # Debug symbols for the test executables, so a crash prints a readable stack (see Main.cpp).
 if(MSVC)
     target_compile_options(ClipperTests PRIVATE /Zi)
-    target_link_options(ClipperTests PRIVATE /DEBUG /OPT:REF /OPT:ICF)
+    # 8 MB stack: MSVC gives every local in a test function its own stack slot; some tests create many engines.
+    target_link_options(ClipperTests PRIVATE /DEBUG /OPT:REF /OPT:ICF /STACK:8388608)
 endif()
 
 add_test(NAME ClipperTests COMMAND ClipperTests)
