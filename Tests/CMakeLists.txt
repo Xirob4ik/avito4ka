@@ -29,6 +29,12 @@ target_link_libraries(ClipperTests
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
 
+# Debug symbols for the test executables, so a crash prints a readable stack (see Main.cpp).
+if(MSVC)
+    target_compile_options(ClipperTests PRIVATE /Zi)
+    target_link_options(ClipperTests PRIVATE /DEBUG /OPT:REF /OPT:ICF)
+endif()
+
 add_test(NAME ClipperTests COMMAND ClipperTests)
 set_tests_properties(ClipperTests PROPERTIES TIMEOUT 1800)
 

@@ -11,6 +11,16 @@
 
 #include <iostream>
 
+#if JUCE_WINDOWS
+ #ifndef NOMINMAX
+  #define NOMINMAX
+ #endif
+ #ifndef WIN32_LEAN_AND_MEAN
+  #define WIN32_LEAN_AND_MEAN
+ #endif
+ #include <windows.h>        // EXCEPTION_POINTERS for the crash report
+#endif
+
 #include "DSP/OversamplingProcessor.h"
 
 int runSnapshotTool (const juce::StringArray& args);    // SnapshotTool.cpp
@@ -81,9 +91,28 @@ namespace
     }
 }
 
+namespace
+{
+    // If a test crashes, say where: exception code, address and a symbolised stack (PDBs are built for the tests).
+    void crashHandler (void* info)
+    {
+        std::cout << "\n*** CRASH ***" << std::endl;
+       #if JUCE_WINDOWS
+        if (auto* ep = static_cast<EXCEPTION_POINTERS*> (info); ep != nullptr && ep->ExceptionRecord != nullptr)
+            std::cout << "exception code 0x" << juce::String::toHexString ((juce::int64) ep->ExceptionRecord->ExceptionCode)
+                      << " at 0x" << juce::String::toHexString ((juce::pointer_sized_int) ep->ExceptionRecord->ExceptionAddress) << std::endl;
+       #else
+        std::cout << "signal " << (int) (juce::pointer_sized_int) info << std::endl;
+       #endif
+        std::cout << juce::SystemStats::getStackBacktrace() << std::endl;
+        std::cout.flush();
+    }
+}
+
 int main (int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI juceInit;
+    juce::SystemStats::setApplicationCrashHandler (crashHandler);
 
     juce::StringArray args;
     for (int i = 1; i < argc; ++i)
