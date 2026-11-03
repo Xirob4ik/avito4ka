@@ -11,25 +11,31 @@
 | `ClipperHostCheck <путь к .vst3>` | `Tests/HostCheck/HostCheck.cpp` | Мини-хост: загружает **собранный .vst3 через интерфейсы VST3**, как это делает DAW. Сканирование, имя/категория, 8 параметров видны хосту, звук ограничен потолком, смена задержки доходит до хоста (`restartComponent`), сохранение/восстановление состояния, открытие и закрытие окна редактора |
 | `ClipperTests --snapshot out.png` | `Tests/SnapshotTool.cpp` | Рендер окна плагина в PNG на синтетическом материале (для визуальной проверки) |
 
-## Что реально запускалось (среда разработки, 3 ноября 2026)
+## Что реально запускалось (3 ноября 2026)
 
-Машина разработки: Linux x86-64, без Windows. Поэтому:
+### Настоящие Windows и macOS (GitHub Actions, ветка `clipline`, прогон 41659229207)
 
-1. **Нативная Linux-сборка:** все 79 групп, **4111 проверок, 0 ошибок**.
-2. **Windows x64 сборка** (кросс-компиляция llvm-mingw / clang 20, тот же код, что в установщике), запущенная **под Wine 10.10**:
-   * `ClipperTests.exe`: все 79 групп, **4111 проверок, 0 ошибок**;
-   * `ClipperHostCheck.exe` на плагине, установленном установщиком в `C:\Program Files\Common Files\VST3`: **26 из 26 проверок**;
-   * установщик: тихая установка, запись в реестре, повторная установка поверх, удаление через зарегистрированный деинсталлятор (файлы, папка и ключ реестра удалены, отложенных операций нет), окно установщика на русском и английском;
-   * снимок интерфейса, отрисованный Windows-путём JUCE (Direct2D в Wine) и программным рендерером.
-3. **Импорты DLL** плагина: только системные библиотеки Windows и UCRT (входит в Windows 10/11), экспорт `GetPluginFactory`/`InitDll`/`ExitDll` на месте.
+| | Windows Server (windows-latest), MSVC | macOS 14 (Apple Silicon), Apple clang, universal arm64 + x86_64 |
+|---|---|---|
+| Юнит-тесты `ClipperTests` | 79 групп, 4111 проверок, 0 ошибок | 79 групп, 4111 проверок, 0 ошибок |
+| `ClipperHostCheck` (VST3 из папки сборки и после установки) | пройдено, оба раза | пройдено, оба раза |
+| Установщик | `Clipline-0.1.0-Win64-Setup.exe /S` → плагин в `C:\Program Files\Common Files\VST3` | `sudo installer -pkg …` → VST3 и AU в `/Library/Audio/Plug-Ins` |
+| pluginval, строгость 10 | VST3: SUCCESS | VST3: SUCCESS, AU: SUCCESS |
+| `auval` (валидатор Apple для AU) | — | AU VALIDATION SUCCEEDED |
+| Linux (ubuntu-24.04) | все тесты | |
+
+Установщики, которые получил пользователь, — это ровно эти файлы из прогона: они переданы через лог сборки в base64, и SHA-256 совпала с суммой, посчитанной на сервере сборки.
+
+### Среда разработки (Linux)
+
+1. **Нативная Linux-сборка:** 79 групп, 4111 проверок, 0 ошибок.
+2. **Кросс-сборка Windows (llvm-mingw / clang 20) под Wine 10.10:** все тесты, мини-хост, установка/удаление. Это запасной путь сборки. Wine не воспроизводит часть отличий Windows: так была пропущена ошибка с comctl32 (см. [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)).
 
 ## Что НЕ проверялось
 
-* Запуск на настоящей Windows и в настоящих DAW (FL Studio, Ableton Live, REAPER): в среде разработки их нет. HostCheck воспроизводит путь загрузки VST3 через тот же код хостинга JUCE, но это не DAW.
-* Steinberg VST3 Validator и pluginval: их бинарники в этой среде недоступны.
-* Отрисовка Direct2D на реальной видеокарте. Под Wine отрисовка Direct2D даёт мелкие артефакты (лишние сегменты линий), которых нет в программном рендере того же бинарника. Это особенность Direct2D в Wine, но на реальной Windows это не проверено. На случай проблем есть меню ⋯ → Software rendering.
-* Сборка в Visual Studio (MSVC): CMake-проект рассчитан на неё, а CI-конфигурация (`.github/workflows/build.yml`) её выполняет, но здесь MSVC недоступен, и эта сборка не запускалась.
-* macOS: архитектура (CMake, JUCE, отделённый от GUI движок) позволяет добавить AU/VST3 для macOS, но сборка не делалась.
+* Загрузка в настоящих DAW: FL Studio, Ableton Live, REAPER, Logic Pro. pluginval и `auval` загружают плагин так же, как хост, но это не DAW.
+* Отрисовка Direct2D на реальной видеокарте: на серверах GitHub нет GPU, и pluginval открывает окно только для проверки, не сравнивая картинку. На случай проблем есть меню ⋯ → Software rendering.
+* Steinberg VST3 Validator (из VST3 SDK) не запускался; pluginval покрывает большую часть тех же проверок.
 
 ## Как запустить самому
 
@@ -40,4 +46,4 @@ build\Tests\ClipperTests_artefacts\Release\ClipperTests.exe
 build\Tests\ClipperHostCheck_artefacts\Release\ClipperHostCheck.exe "C:\Program Files\Common Files\VST3\Clipline.vst3"
 ```
 
-Рекомендуется также прогнать [pluginval](https://github.com/Tracktion/pluginval) (`pluginval --strictness-level 10 --validate "C:\Program Files\Common Files\VST3\Clipline.vst3"`) и VST3 validator из VST3 SDK.
+Также можно прогнать [pluginval](https://github.com/Tracktion/pluginval) (`pluginval --strictness-level 10 --validate "C:\Program Files\Common Files\VST3\Clipline.vst3"`) и VST3 validator из VST3 SDK.
