@@ -57,5 +57,5 @@ OUT="$BUILD/Clipline-$VERSION-macOS.pkg"
 SIGN_ARGS=()
 [ -n "${CLIPLINE_SIGN_INSTALLER:-}" ] && SIGN_ARGS=(--sign "$CLIPLINE_SIGN_INSTALLER")
 productbuild --distribution "$WORK/distribution.xml" --resources "$HERE/resources" \
-             --package-path "$WORK/pkgs" "${SIGN_ARGS[@]}" "$OUT"
+             --package-path "$WORK/pkgs" ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"} "$OUT"   # bash 3.2: empty array + set -u
 echo "Created $OUT"
