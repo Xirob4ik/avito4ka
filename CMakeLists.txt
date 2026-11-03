@@ -149,6 +149,12 @@ if(MINGW)
         OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/mingw-compat/comctl32-v6.manifest")
 endif()
 
+# MSVC: write a PDB next to the plugin (not installed) so crash reports from validators/hosts are readable.
+if(MSVC)
+    target_compile_options(Clipline PRIVATE /Zi)
+    target_link_options(Clipline_VST3 PRIVATE /DEBUG /OPT:REF /OPT:ICF)
+endif()
+
 if(CLIPLINE_ENABLE_LTO)
     target_link_libraries(Clipline PUBLIC juce::juce_recommended_lto_flags)
 endif()
