@@ -31,21 +31,15 @@ jobs:
         run: |
           Invoke-WebRequest https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip -OutFile pluginval.zip
           Expand-Archive pluginval.zip -DestinationPath pluginval
-          $PSNativeCommandUseErrorActionPreference = $false   # handle pluginval's exit code ourselves
-          $ErrorActionPreference = "Continue"
-          # Validate the build-folder copy (it has the PDB next to it, so a crash report is symbolised).
-          .\pluginval\pluginval.exe --strictness-level 10 --validate-in-process --output-dir pluginval-logs --validate build\Clipline_artefacts\Release\VST3\Clipline.vst3
-          $code = $LASTEXITCODE
-          if ($code -ne 0) {
-            Write-Host "pluginval exit code $code"
-            $crash = Join-Path $env:TEMP "pluginval_crash.txt"
-            if (Test-Path $crash) { Write-Host "---- pluginval crash report ----"; Get-Content $crash }
-            Get-ChildItem pluginval-logs -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "---- $($_.FullName)"; Get-Content $_.FullName -Tail 60 }
-            Write-Host "---- diagnostic re-run without GUI tests ----"
-            .\pluginval\pluginval.exe --strictness-level 10 --validate-in-process --skip-gui-tests --validate build\Clipline_artefacts\Release\VST3\Clipline.vst3
-            Write-Host "pluginval without GUI tests: exit code $LASTEXITCODE"
-            exit 1
-          }
+          # pluginval.exe is a GUI-subsystem program: PowerShell does not wait for it unless told to.
+          $args = @('--strictness-level', '10', '--validate-in-process', '--output-dir', 'pluginval-logs',
+                    '--validate', '"C:\Program Files\Common Files\VST3\Clipline.vst3"')
+          $p = Start-Process -FilePath .\pluginval\pluginval.exe -ArgumentList $args -Wait -PassThru -NoNewWindow
+          Get-ChildItem pluginval-logs -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "---- $($_.Name)"; Get-Content $_.FullName }
+          Write-Host "pluginval exit code: $($p.ExitCode)"
+          $crash = Join-Path $env:TEMP "pluginval_crash.txt"
+          if (Test-Path $crash) { Write-Host "---- pluginval crash report ----"; Get-Content $crash }
+          if ($p.ExitCode -ne 0) { exit 1 }
       - name: Export the installer into the log (base64, for retrieval without artifact storage)
         if: always()
         shell: bash
