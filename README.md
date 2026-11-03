@@ -46,7 +46,7 @@ cd Clipline
 Или вручную:
 
 ```powershell
-cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake -B build -A x64
 cmake --build build --config Release --parallel
 build\Tests\ClipperTests_artefacts\Release\ClipperTests.exe
 build\Tests\ClipperHostCheck_artefacts\Release\ClipperHostCheck.exe build\Clipline_artefacts\Release\VST3\Clipline.vst3

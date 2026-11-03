@@ -17,7 +17,7 @@ foreach ($tool in "cmake", "git") {
     }
 }
 
-cmake -B $BuildDir -G "Visual Studio 17 2022" -A x64
+cmake -B $BuildDir -A x64     # uses the newest installed Visual Studio (2022 or later)
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 cmake --build $BuildDir --config $Config --parallel
 if ($LASTEXITCODE -ne 0) { throw "Build failed" }

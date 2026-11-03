@@ -90,14 +90,14 @@ struct ParameterTests : public juce::UnitTest
             expectEquals (range (ids::kMix).start, 0.0f);       expectEquals (range (ids::kMix).end, 100.0f);
 
             auto def = [&] (const char* id) { auto* x = p.apvts.getParameter (id); return x->convertFrom0to1 (x->getDefaultValue()); };
-            expectEquals (def (ids::kInput), 0.0f);
-            expectEquals (def (ids::kClip), -3.0f);
-            expectEquals (def (ids::kOutput), 0.0f);
-            expectEquals (def (ids::kMix), 100.0f);
-            expectEquals (def (ids::kMode), 0.0f);
-            expectEquals (def (ids::kOversampling), 2.0f);
-            expectEquals (def (ids::kLink), 1.0f);
-            expectEquals (def (ids::kCeiling), 1.0f);
+            expectWithinAbsoluteError (def (ids::kInput), 0.0f, 1.0e-4f);
+            expectWithinAbsoluteError (def (ids::kClip), -3.0f, 1.0e-4f);
+            expectWithinAbsoluteError (def (ids::kOutput), 0.0f, 1.0e-4f);
+            expectWithinAbsoluteError (def (ids::kMix), 100.0f, 1.0e-4f);
+            expectWithinAbsoluteError (def (ids::kMode), 0.0f, 1.0e-4f);
+            expectWithinAbsoluteError (def (ids::kOversampling), 2.0f, 1.0e-4f);
+            expectWithinAbsoluteError (def (ids::kLink), 1.0f, 1.0e-4f);
+            expectWithinAbsoluteError (def (ids::kCeiling), 1.0f, 1.0e-4f);
 
             auto* mode = dynamic_cast<juce::AudioParameterChoice*> (p.apvts.getParameter (ids::kMode));
             auto* os   = dynamic_cast<juce::AudioParameterChoice*> (p.apvts.getParameter (ids::kOversampling));

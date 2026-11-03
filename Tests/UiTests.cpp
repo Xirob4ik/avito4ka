@@ -133,7 +133,7 @@ struct KnobTests : public juce::UnitTest
             expectWithinAbsoluteError (plain (f.processor, ids::kInput), -24.0f, 0.001f);
         }
 
-        beginTest ("Shift / Ctrl drag is ten times finer");
+        beginTest ("Shift / Ctrl (Cmd on macOS) drag is ten times finer");
         {
             EditorFixture f;
             auto& knob = f.editor->getInputKnob();
@@ -144,8 +144,14 @@ struct KnobTests : public juce::UnitTest
             m.release (c.translated (0.0f, -22.0f), true);
             expectWithinAbsoluteError (plain (f.processor, ids::kInput), 0.5f, 0.051f);   // 0.48 dB on the 0.1 dB grid
 
-            m.press (c, juce::ModifierKeys::leftButtonModifier | juce::ModifierKeys::ctrlModifier);
-            m.dragTo (c.translated (0.0f, 22.0f), juce::ModifierKeys::leftButtonModifier | juce::ModifierKeys::ctrlModifier);
+            // Second fine-adjust key: Ctrl on Windows; on macOS Ctrl+click means right-click, so it is Cmd there.
+           #if JUCE_MAC
+            const auto fineKey = juce::ModifierKeys::commandModifier;
+           #else
+            const auto fineKey = juce::ModifierKeys::ctrlModifier;
+           #endif
+            m.press (c, juce::ModifierKeys::leftButtonModifier | fineKey);
+            m.dragTo (c.translated (0.0f, 22.0f), juce::ModifierKeys::leftButtonModifier | fineKey);
             m.release (c.translated (0.0f, 22.0f), true);
             expectWithinAbsoluteError (plain (f.processor, ids::kInput), 0.0f, 0.051f);
         }
