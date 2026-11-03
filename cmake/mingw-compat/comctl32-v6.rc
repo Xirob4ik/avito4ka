@@ -1,0 +1,2 @@
+// RT_MANIFEST (24) with ISOLATIONAWARE_MANIFEST_RESOURCE_ID (2): the loader uses it to resolve this DLL's imports.
+2 24 "comctl32-v6.manifest"

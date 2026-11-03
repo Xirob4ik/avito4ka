@@ -1,0 +1,65 @@
+--- a/modules/juce_core/system/juce_TargetPlatform.h
++++ b/modules/juce_core/system/juce_TargetPlatform.h
+@@ -97,7 +97,7 @@
+ 
+ //==============================================================================
+ #if JUCE_WINDOWS
+-  #ifdef _MSC_VER
++  #if defined (_MSC_VER) || defined (__MINGW32__)
+     #ifdef _WIN64
+       #define JUCE_64BIT 1
+     #else
+@@ -110,7 +110,7 @@
+   #endif
+ 
+   #ifdef __MINGW32__
+-    #error "MinGW is not supported. Please use an alternative compiler."
++    #define JUCE_MINGW 1   // Clipline: llvm-mingw (clang) cross build, see cmake/toolchains/llvm-mingw-x86_64.cmake
+   #endif
+ 
+   /** If defined, this indicates that the processor is little-endian. */
+--- a/modules/juce_gui_basics/native/juce_Direct2DHwndContext_windows.cpp
++++ b/modules/juce_gui_basics/native/juce_Direct2DHwndContext_windows.cpp
+@@ -141,7 +141,7 @@
+ 
+         ComSmartPtr<IDXGIDevice> device;
+         JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wlanguage-extension-token")
+-        chain->GetDevice (__uuidof (device), (void**) device.resetAndGetPointerAddress());
++        chain->GetDevice (__uuidof (IDXGIDevice), (void**) device.resetAndGetPointerAddress());
+         JUCE_END_IGNORE_WARNINGS_GCC_LIKE
+ 
+         createBuffer (Direct2DDeviceResources::findAdapter (directX->adapters, device));
+@@ -193,7 +193,7 @@
+ 
+         ComSmartPtr<IDXGISurface> surface;
+         JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wlanguage-extension-token")
+-        if (const auto hr = chain->GetBuffer (0, __uuidof (surface), reinterpret_cast<void**> (surface.resetAndGetPointerAddress())); FAILED (hr))
++        if (const auto hr = chain->GetBuffer (0, __uuidof (IDXGISurface), reinterpret_cast<void**> (surface.resetAndGetPointerAddress())); FAILED (hr))
+             return nullptr;
+         JUCE_END_IGNORE_WARNINGS_GCC_LIKE
+ 
+--- a/modules/juce_graphics/native/juce_DirectX_windows.cpp
++++ b/modules/juce_graphics/native/juce_DirectX_windows.cpp
+@@ -613,7 +613,7 @@
+ 
+     ComSmartPtr<IDXGIDevice> device;
+     JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wlanguage-extension-token")
+-    surface->GetDevice (__uuidof (device), (void**) device.resetAndGetPointerAddress());
++    surface->GetDevice (__uuidof (IDXGIDevice), (void**) device.resetAndGetPointerAddress());
+     JUCE_END_IGNORE_WARNINGS_GCC_LIKE
+ 
+     return findAdapter (adapters, device);
+--- a/modules/juce_gui_basics/native/juce_VBlank_windows.cpp
++++ b/modules/juce_gui_basics/native/juce_VBlank_windows.cpp
+@@ -133,6 +133,11 @@
+             }
+             else
+             {
++                // Clipline patch: WaitForVBlank() can fail for good (display off or detached, remote session,
++                // virtual display). Without this check the thread never sees flagExit and closing the editor hangs.
++                if ((state.load() & flagExit) != 0)
++                    return;
++
+                 sleep (1);
+             }
+         }
